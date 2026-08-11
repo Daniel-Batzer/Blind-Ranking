@@ -8,6 +8,15 @@ datasource db {
   schemas  = ["identity", "content", "game"]
 }
 
+enum GameSessionStatus {
+  LOBBY
+  ACTIVE
+  REVEAL
+  FINISHED
+
+  @@schema("game")
+}
+
 model User {
   id           String  @id @default(uuid()) @db.Uuid
   displayName  String
@@ -15,9 +24,11 @@ model User {
 
   accounts ExternalAccount[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  topics    Topic[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  topics              Topic[]
+  gameSessions        GameSession[]
+  sessionParticipants SessionParticipant[]
 
   @@schema("identity")
 }
@@ -48,6 +59,7 @@ model Topic {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   rankingItems RankingItem[]
+  gameSessions GameSession[]
 
   @@unique([ownerId, title])
   @@schema("content")
@@ -60,8 +72,88 @@ model RankingItem {
   topicId String @db.Uuid
   topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  sessionItems SessionItem[]
 
   @@schema("content")
+}
+
+model GameSession {
+  id String @id @default(uuid()) @db.Uuid
+
+  hostUserId String @db.Uuid
+  hostUser   User   @relation(fields: [hostUserId], references: [id])
+
+  topicId String @db.Uuid
+  topic   Topic  @relation(fields: [topicId], references: [id])
+
+  status   GameSessionStatus @default(LOBBY)
+  joinCode String            @unique
+
+  currentPosition Int?
+
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  items        SessionItem[]
+  participants SessionParticipant[]
+
+  @@schema("game")
+}
+
+model SessionItem {
+  id String @id @default(uuid()) @db.Uuid
+
+  sessionId String      @db.Uuid
+  session   GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  sourceRankingItemId String?      @db.Uuid
+  sourceRankingItem   RankingItem? @relation(fields: [sourceRankingItemId], references: [id], onDelete: SetNull)
+
+  text     String
+  position Int
+
+  rankings Ranking[]
+
+  @@unique([sessionId, position])
+  @@unique([sessionId, sourceRankingItemId])
+  @@schema("game")
+}
+
+model SessionParticipant {
+  id String @id @default(uuid()) @db.Uuid
+
+  sessionId String      @db.Uuid
+  session   GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id])
+
+  displayName String
+  joinedAt    DateTime @default(now())
+
+  rankings Ranking[]
+
+  @@unique([sessionId, userId])
+  @@schema("game")
+}
+
+model Ranking {
+  id String @id @default(uuid()) @db.Uuid
+
+  participantId String             @db.Uuid
+  participant   SessionParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  sessionItemId String      @db.Uuid
+  sessionItem   SessionItem @relation(fields: [sessionItemId], references: [id], onDelete: Cascade)
+
+  rank Int
+
+  createdAt DateTime @default(now())
+
+  @@unique([participantId, rank])
+  @@unique([participantId, sessionItemId])
+  @@schema("game")
 }
