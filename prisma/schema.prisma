@@ -1,0 +1,67 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["identity", "content", "game"]
+}
+
+model User {
+  id           String  @id @default(uuid()) @db.Uuid
+  displayName  String
+  canHostGames Boolean @default(false)
+
+  accounts ExternalAccount[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  topics    Topic[]
+
+  @@schema("identity")
+}
+
+model ExternalAccount {
+  id String @id @default(uuid()) @db.Uuid
+
+  provider          String
+  providerAccountId String
+
+  userId String @db.Uuid
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
+  @@schema("identity")
+}
+
+model Topic {
+  id          String  @id @default(uuid()) @db.Uuid
+  title       String
+  description String?
+
+  ownerId String @db.Uuid
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  rankingItems RankingItem[]
+
+  @@unique([ownerId, title])
+  @@schema("content")
+}
+
+model RankingItem {
+  id   String @id @default(uuid()) @db.Uuid
+  text String
+
+  topicId String @db.Uuid
+  topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@schema("content")
+}
