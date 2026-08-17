@@ -17,6 +17,14 @@ enum GameSessionStatus {
   @@schema("game")
 }
 
+enum RankingItemStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@schema("content")
+}
+
 model User {
   id           String  @id @default(uuid()) @db.Uuid
   displayName  String
@@ -66,8 +74,9 @@ model Topic {
 }
 
 model RankingItem {
-  id   String @id @default(uuid()) @db.Uuid
-  text String
+  id     String            @id @default(uuid()) @db.Uuid
+  text   String
+  status RankingItemStatus @default(APPROVED)
 
   topicId String @db.Uuid
   topic   Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
@@ -76,6 +85,7 @@ model RankingItem {
   updatedAt    DateTime      @updatedAt
   sessionItems SessionItem[]
 
+  @@unique([topicId, text])
   @@schema("content")
 }
 

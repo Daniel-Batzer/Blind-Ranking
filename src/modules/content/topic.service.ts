@@ -1,5 +1,5 @@
 import { ValidationError } from "@/lib/errors";
-import { createTopic } from "./topic.repository";
+import { createTopic, findTopicsByOwner } from "./topic.repository";
 import { CreateTopicInput } from "./topic.schema";
 
 export async function createTopicForUser(
@@ -29,4 +29,8 @@ export async function createTopicForUser(
   };
 
   return createTopic(ownerId, checkedInput);
+}
+
+export async function findTopicsForUser(userId: string) {
+  return findTopicsByOwner(userId);
 }

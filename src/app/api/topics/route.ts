@@ -1,4 +1,7 @@
-import { createTopicForUser } from "@/modules/content/topic.service";
+import {
+  createTopicForUser,
+  findTopicsForUser,
+} from "@/modules/content/topic.service";
 import { createTopicSchema } from "@/modules/content/topic.schema";
 import { getDevUser } from "@/modules/identity/dev-user.service";
 import { ValidationError } from "@/lib/errors";
@@ -29,4 +32,11 @@ export async function POST(request: Request) {
 
     throw error;
   }
+}
+
+export async function GET() {
+  const user = await getDevUser();
+  const topics = await findTopicsForUser(user.id);
+
+  return Response.json(topics, { status: 200 });
 }
