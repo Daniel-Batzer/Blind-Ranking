@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { CreateTopicInput } from "./topic.types";
+import { CreateTopicInput } from "./topic.schema";
 
 export function findTopicsByOwner(ownerId: string) {
   return prisma.topic.findMany({

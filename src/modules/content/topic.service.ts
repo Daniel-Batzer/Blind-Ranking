@@ -1,5 +1,6 @@
+import { ValidationError } from "@/lib/errors";
 import { createTopic } from "./topic.repository";
-import { CreateTopicInput } from "./topic.types";
+import { CreateTopicInput } from "./topic.schema";
 
 export async function createTopicForUser(
   ownerId: string,
@@ -10,15 +11,15 @@ export async function createTopicForUser(
   const rankingItems = input.rankingItems.map((item) => item.trim());
 
   if (!title) {
-    throw new Error("Title is required");
+    throw new ValidationError("Title is required");
   }
 
   if (rankingItems.length !== 5) {
-    throw new Error("Exactly 5 ranking items are required");
+    throw new ValidationError("Exactly 5 ranking items are required");
   }
 
   if (rankingItems.some((item) => !item)) {
-    throw new Error("Ranking items cannot be empty");
+    throw new ValidationError("Ranking items cannot be empty");
   }
 
   const checkedInput: CreateTopicInput = {
