@@ -4,6 +4,7 @@ import type { RankingItemStatus } from "@/generated/prisma/enums";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 
 import { Button } from "../ui/button";
 import {
@@ -32,12 +33,15 @@ import {
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
-import { useRouter } from "next/navigation";
 
 import {
   createTopicSchema,
   type CreateTopicInput,
 } from "@/modules/content/topic.schema";
+import {
+  createRankingItemSchema,
+  type CreateRankingItemInput,
+} from "@/modules/content/ranking-item.schema";
 
 export type TopicDTO = {
   id: string;
@@ -57,14 +61,23 @@ export type TopicManagerProps = {
 export function TopicManager({ topics }: TopicManagerProps) {
   const router = useRouter();
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+  // Topic dialog state
+  const [topicDialogOpen, setTopicDialogOpen] = useState(false);
+  const [createTopicError, setCreateTopicError] = useState<string | null>(null);
 
+  // Ranking item dialog state
+  const [itemDialogOpen, setItemDialogOpen] = useState(false);
+  const [createItemError, setCreateItemError] = useState<string | null>(null);
+
+  // Selected topic
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(
     topics.length > 0 ? topics[0].id : null,
   );
 
-  const form = useForm<CreateTopicInput>({
+  const selectedTopic = topics.find((topic) => topic.id === selectedTopicId);
+
+  // Topic form
+  const topicForm = useForm<CreateTopicInput>({
     resolver: zodResolver(createTopicSchema),
     defaultValues: {
       title: "",
@@ -73,10 +86,16 @@ export function TopicManager({ topics }: TopicManagerProps) {
     },
   });
 
-  const selectedTopic = topics.find((topic) => topic.id === selectedTopicId);
+  // Ranking item form
+  const rankingItemForm = useForm<CreateRankingItemInput>({
+    resolver: zodResolver(createRankingItemSchema),
+    defaultValues: {
+      text: "",
+    },
+  });
 
   async function handleCreateTopic(data: CreateTopicInput) {
-    setCreateError(null);
+    setCreateTopicError(null);
 
     try {
       const response = await fetch("/api/topics", {
@@ -90,17 +109,71 @@ export function TopicManager({ topics }: TopicManagerProps) {
       const createdTopic = await response.json();
 
       if (!response.ok) {
-        setCreateError(createdTopic.error ?? "Could not create topic");
+        setCreateTopicError(createdTopic.error ?? "Could not create topic");
         return;
       }
 
       setSelectedTopicId(createdTopic.id);
 
-      form.reset();
-      setDialogOpen(false);
+      topicForm.reset();
+      setTopicDialogOpen(false);
+
       router.refresh();
     } catch {
-      setCreateError("Could not create topic");
+      setCreateTopicError("Could not create topic");
+    }
+  }
+
+  async function handleCreateRankingItem(data: CreateRankingItemInput) {
+    if (!selectedTopicId) {
+      setCreateItemError("No topic selected");
+      return;
+    }
+
+    setCreateItemError(null);
+
+    try {
+      const response = await fetch(`/api/topics/${selectedTopicId}/items`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      const createdItem = await response.json();
+
+      if (!response.ok) {
+        setCreateItemError(
+          createdItem.error ?? "Could not create ranking item",
+        );
+        return;
+      }
+
+      rankingItemForm.reset();
+      setItemDialogOpen(false);
+
+      router.refresh();
+    } catch {
+      setCreateItemError("Could not create ranking item");
+    }
+  }
+
+  function handleTopicDialogChange(open: boolean) {
+    setTopicDialogOpen(open);
+
+    if (!open) {
+      topicForm.reset();
+      setCreateTopicError(null);
+    }
+  }
+
+  function handleItemDialogChange(open: boolean) {
+    setItemDialogOpen(open);
+
+    if (!open) {
+      rankingItemForm.reset();
+      setCreateItemError(null);
     }
   }
 
@@ -111,7 +184,7 @@ export function TopicManager({ topics }: TopicManagerProps) {
           value={selectedTopicId ?? undefined}
           onValueChange={setSelectedTopicId}
         >
-          <SelectTrigger className="w-[420px]">
+          <SelectTrigger className="w-105">
             <SelectValue placeholder="Select a topic" />
           </SelectTrigger>
 
@@ -124,7 +197,8 @@ export function TopicManager({ topics }: TopicManagerProps) {
           </SelectContent>
         </Select>
 
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        {/* Create Topic */}
+        <Dialog open={topicDialogOpen} onOpenChange={handleTopicDialogChange}>
           <DialogTrigger asChild>
             <Button size="icon">+</Button>
           </DialogTrigger>
@@ -139,61 +213,62 @@ export function TopicManager({ topics }: TopicManagerProps) {
 
             <form
               className="space-y-4"
-              onSubmit={form.handleSubmit(handleCreateTopic)}
+              onSubmit={topicForm.handleSubmit(handleCreateTopic)}
             >
               <div className="space-y-2">
                 <Label htmlFor="topic-title">Title</Label>
+
                 <Input
                   id="topic-title"
                   placeholder="Enter a title"
-                  {...form.register("title")}
-                  aria-invalid={!!form.formState.errors.title}
+                  {...topicForm.register("title")}
+                  aria-invalid={!!topicForm.formState.errors.title}
                 />
 
-                {form.formState.errors.title && (
+                {topicForm.formState.errors.title && (
                   <p className="text-sm text-destructive">
-                    {form.formState.errors.title.message}
+                    {topicForm.formState.errors.title.message}
                   </p>
                 )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="topic-description">Description</Label>
+
                 <Textarea
                   id="topic-description"
                   placeholder="Enter a description"
-                  {...form.register("description")}
-                  aria-invalid={!!form.formState.errors.description}
+                  {...topicForm.register("description")}
+                  aria-invalid={!!topicForm.formState.errors.description}
                   className="min-w-0 field-sizing-fixed resize-y"
                 />
 
-                {form.formState.errors.description && (
+                {topicForm.formState.errors.description && (
                   <p className="text-sm text-destructive">
-                    {form.formState.errors.description.message}
+                    {topicForm.formState.errors.description.message}
                   </p>
                 )}
               </div>
 
-              {createError && (
-                <p className="text-sm text-destructive">{createError}</p>
+              {createTopicError && (
+                <p className="text-sm text-destructive">{createTopicError}</p>
               )}
 
               <div className="flex justify-end gap-2">
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    form.reset();
-                    setCreateError(null);
-                    setDialogOpen(false);
-                  }}
-                  disabled={form.formState.isSubmitting}
+                  onClick={() => handleTopicDialogChange(false)}
+                  disabled={topicForm.formState.isSubmitting}
                 >
                   Cancel
                 </Button>
 
-                <Button type="submit" disabled={form.formState.isSubmitting}>
-                  {form.formState.isSubmitting ? "Creating..." : "Create"}
+                <Button
+                  type="submit"
+                  disabled={topicForm.formState.isSubmitting}
+                >
+                  {topicForm.formState.isSubmitting ? "Creating..." : "Create"}
                 </Button>
               </div>
             </form>
@@ -233,7 +308,70 @@ export function TopicManager({ topics }: TopicManagerProps) {
             </Table>
           </div>
 
-          <Button variant="outline">+ Add item</Button>
+          {/* Create Ranking Item */}
+          <Dialog open={itemDialogOpen} onOpenChange={handleItemDialogChange}>
+            <DialogTrigger asChild>
+              <Button variant="outline">+ Add Item</Button>
+            </DialogTrigger>
+
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Ranking Item</DialogTitle>
+
+                <DialogDescription>
+                  Add a new ranking item to &quot;
+                  {selectedTopic.title}&quot;.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form
+                className="space-y-4"
+                onSubmit={rankingItemForm.handleSubmit(handleCreateRankingItem)}
+              >
+                <div className="space-y-2">
+                  <Label htmlFor="item-text">Item Text</Label>
+
+                  <Textarea
+                    id="item-text"
+                    placeholder="Enter content for the item"
+                    {...rankingItemForm.register("text")}
+                    aria-invalid={!!rankingItemForm.formState.errors.text}
+                    className="min-w-0 field-sizing-fixed resize-y"
+                  />
+
+                  {rankingItemForm.formState.errors.text && (
+                    <p className="text-sm text-destructive">
+                      {rankingItemForm.formState.errors.text.message}
+                    </p>
+                  )}
+                </div>
+
+                {createItemError && (
+                  <p className="text-sm text-destructive">{createItemError}</p>
+                )}
+
+                <div className="flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleItemDialogChange(false)}
+                    disabled={rankingItemForm.formState.isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    type="submit"
+                    disabled={rankingItemForm.formState.isSubmitting}
+                  >
+                    {rankingItemForm.formState.isSubmitting
+                      ? "Adding..."
+                      : "Add Item"}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
     </div>

@@ -5,6 +5,7 @@ import {
 import { createTopicSchema } from "@/modules/content/topic.schema";
 import { getDevUser } from "@/modules/identity/dev-user.service";
 import { ValidationError } from "@/lib/errors";
+import { z } from "zod";
 
 export async function POST(request: Request) {
   const body = await request.json();
@@ -14,7 +15,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error: "Invalid request body",
-        details: checkedInput.error.flatten(),
+        details: z.flattenError(checkedInput.error),
       },
       { status: 400 },
     );

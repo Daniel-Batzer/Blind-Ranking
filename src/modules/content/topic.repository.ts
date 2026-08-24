@@ -12,6 +12,15 @@ export function findTopicsByOwner(ownerId: string) {
   });
 }
 
+export function findTopicByIdAndOwner(topicId: string, ownerId: string) {
+  return prisma.topic.findFirst({
+    where: {
+      id: topicId,
+      ownerId: ownerId,
+    },
+  });
+}
+
 export function createTopic(ownerId: string, input: CreateTopicInput) {
   return prisma.topic.create({
     data: {
