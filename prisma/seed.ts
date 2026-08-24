@@ -29,8 +29,6 @@ async function main() {
       },
     },
   });
-
-  console.log("Created dev creator:");
 }
 
 main()

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { CreateTopicInput } from "./topic.schema";
+import type { CreateTopicInput } from "./topic.schema";
 
 export function findTopicsByOwner(ownerId: string) {
   return prisma.topic.findMany({
@@ -18,11 +18,13 @@ export function createTopic(ownerId: string, input: CreateTopicInput) {
       ownerId,
       title: input.title,
       description: input.description,
-      rankingItems: {
-        create: input.rankingItems.map((item) => ({
-          text: item,
-        })),
-      },
+      rankingItems: input.rankingItems
+        ? {
+            create: input.rankingItems.map((item) => ({
+              text: item,
+            })),
+          }
+        : undefined,
     },
   });
 }

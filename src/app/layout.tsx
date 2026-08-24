@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Blind Ranking",
   description:
-    "An interactive blind ranking game for streamers and their communities.",
+    "An interactive blind ranking game for streamers and their communities. Rank now. Regret later.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
